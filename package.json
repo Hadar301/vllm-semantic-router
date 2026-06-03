@@ -1,0 +1,5 @@
+{
+  "name": "vllm-semantic-router",
+  "private": true,
+  "packageManager": "pnpm@9.15.0"
+}

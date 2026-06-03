@@ -1,0 +1,15 @@
+[project]
+name = "vllm-semantic-router-db"
+version = "0.1.0"
+description = "Database models for vLLM Semantic Router quickstart"
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy[asyncio]>=2.0",
+    "asyncpg>=0.30",
+    "alembic>=1.14",
+    "pgvector>=0.3",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"

@@ -1,0 +1,19 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: "OpenShift namespace"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - run: |
+          helm dependency update deploy/helm/vllm-semantic-router
+          helm upgrade --install vllm-semantic-router \
+            deploy/helm/vllm-semantic-router \
+            -n ${{ github.event.inputs.namespace }}

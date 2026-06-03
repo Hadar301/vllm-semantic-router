@@ -1,0 +1,32 @@
+# vLLM Semantic Router Quickstart - Helm Values
+# See deploy/openshift/ for OpenShift-specific deployment manifests
+
+# -- Research agent: Qwen3-8B with reasoning
+llm-service-research:
+  model:
+    name: Qwen/Qwen3-8B
+    servedModelName: research-agent
+
+# -- RAG backing model: Granite 3.1-8B
+llm-service-rag:
+  model:
+    name: ibm-granite/granite-3.1-8b-instruct
+    servedModelName: rag-model
+
+# -- General conversation: Granite 3.1-2B
+llm-service-general:
+  model:
+    name: ibm-granite/granite-3.1-2b-instruct
+    servedModelName: general-agent
+
+# -- Llamastack for RAG agent orchestration
+llama-stack: {}
+
+# -- pgvector for RAG embeddings
+pgvector: {}
+
+# -- MinIO for RAG document storage
+minio: {}
+
+# -- Ingestion pipeline for document processing
+ingestion-pipeline: {}

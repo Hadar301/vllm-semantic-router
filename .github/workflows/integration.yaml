@@ -1,0 +1,24 @@
+name: Integration Tests
+on:
+  push:
+    branches: [main]
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "packages/api[test]" -e "packages/db"
+      - run: pytest tests/integration/ -v
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test
