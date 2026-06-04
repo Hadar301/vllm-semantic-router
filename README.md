@@ -50,11 +50,12 @@ graph TB
 - Red Hat OpenShift AI 2.9+
 - `oc` CLI authenticated to the cluster
 - `helm` 3.x
-- **GPU:** 2-3 NVIDIA GPUs (T4, L4, or A10G) for model serving. All models are <=8B parameters.
+- **GPU:** 3 NVIDIA GPUs (T4, L4, or A10G) for model serving. All models are <=8B parameters — each requires a dedicated GPU.
   - 1 GPU for Qwen3-8B (research)
   - 1 GPU for Granite 3.1-8B (RAG)
-  - 1 GPU for Granite 3.1-2B (general) -- can share with another model
+  - 1 GPU for Granite 3.1-2B (general)
 - Hugging Face token with access to Qwen3-8B
+- If GPU nodes have custom taints (e.g. `g5-gpu`), tolerations must be added per model in `values.yaml`
 
 ### Local Development
 
@@ -97,24 +98,65 @@ This uploads the bundled sample docs (OpenShift AI overview, SR guide) to MinIO 
 ```bash
 oc login <cluster-url>
 oc new-project vllm-semantic-router
+export HF_TOKEN=<your-huggingface-token>
 ```
 
-### 2. Install with Helm
+### 2. Build and push chat-ui and API images
+
+The chat UI and API backend images must be built and pushed to a container registry accessible from the cluster:
 
 ```bash
-helm dependency update deploy/helm/vllm-semantic-router
+podman build --platform linux/amd64 \
+  -t quay.io/<your-org>/vllm-semantic-router-chat-ui:latest \
+  -f packages/chat-ui/Containerfile packages/chat-ui
+
+podman build --platform linux/amd64 \
+  -t quay.io/<your-org>/vllm-semantic-router-api:latest \
+  -f packages/api/Containerfile packages/api
+
+podman push quay.io/<your-org>/vllm-semantic-router-chat-ui:latest
+podman push quay.io/<your-org>/vllm-semantic-router-api:latest
+```
+
+Then update `deploy/helm/vllm-semantic-router/values.yaml` to point `chatUI.image.repository` and `api.image.repository` to your pushed images.
+
+### 3. GPU node tolerations
+
+If GPU nodes have custom taints (common on shared clusters), add tolerations under each model in `values.yaml`:
+
+```yaml
+# Example for a cluster with g5-gpu taint
+llm-service-general:
+  models:
+    granite-3-1-2b-instruct:
+      tolerations:
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+          operator: Exists
+        - key: g5-gpu        # cluster-specific GPU taint
+          effect: NoSchedule
+          operator: Exists
+```
+
+### 4. Install with Helm
+
+```bash
 helm install vllm-semantic-router deploy/helm/vllm-semantic-router \
   -n vllm-semantic-router \
   --set llm-service-research.secret.hf_token=$HF_TOKEN \
   --set llm-service-rag.secret.hf_token=$HF_TOKEN \
-  --set llm-service-general.secret.hf_token=$HF_TOKEN
+  --set llm-service-general.secret.hf_token=$HF_TOKEN \
+  --set semanticRouter.hfToken=$HF_TOKEN
 ```
 
-### 3. Verify
+> The `semanticRouter.hfToken` is required for the router to download embedding models (mmBERT) used for signal classification.
+
+### 5. Verify
 
 ```bash
 oc get pods -n vllm-semantic-router
 # Wait for all pods to be Running (model downloads take a few minutes)
+# GPU model pods (predictor-*) take longest -- they download multi-GB models
 
 # Get the chat UI URL
 oc get route -n vllm-semantic-router -l app.kubernetes.io/name=chat-ui \
@@ -124,6 +166,18 @@ oc get route -n vllm-semantic-router -l app.kubernetes.io/name=chat-ui \
 oc get route -n vllm-semantic-router -l app.kubernetes.io/name=sr-dashboard \
   -o jsonpath='{.items[0].spec.host}'
 ```
+
+### Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| Predictor pods stuck in `Pending` | GPU nodes have taints the pods don't tolerate | Add tolerations to each model in `values.yaml` |
+| Chat-ui/API pods in `ImagePullBackOff` | Images not pushed or registry not accessible | Build and push images (step 2) |
+| Router (extproc) in `CrashLoopBackOff` | Missing HF_TOKEN or unwritable model dir | Set `semanticRouter.hfToken` in helm values |
+| Dashboard in `CrashLoopBackOff` | OpenShift SCC blocks user switching | Dashboard template overrides entrypoint to skip `gosu` |
+| Chat returns 404 | Nginx not proxying `/api` to the API service | Verify chat-ui-nginx ConfigMap is mounted |
+| Chat hangs (no response) | Envoy backend cluster misconfigured | Verify envoy ConfigMap clusters point to correct vLLM services |
+| vLLM returns "model does not exist" | Model name mismatch between SR and vLLM | `--served-model-name` in vLLM args must match SR model names |
 
 ## Delete / Cleanup
 
