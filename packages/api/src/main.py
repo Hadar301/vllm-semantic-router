@@ -1,8 +1,32 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="vLLM Semantic Router API", version="0.1.0")
+from src.config import settings
+from src.routes.chat import router as chat_router
+from src.routes.health import router as health_router
+from src.services.router_client import RouterClient
 
 
-@app.get("/healthz")
-async def health():
-    return {"status": "ok"}
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.router_client = RouterClient(
+        envoy_url=settings.sr_envoy_url,
+        api_url=settings.sr_api_url,
+    )
+    yield
+    await app.state.router_client.close()
+
+
+app = FastAPI(title="vLLM Semantic Router API", version="0.1.0", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(health_router)
+app.include_router(chat_router)
