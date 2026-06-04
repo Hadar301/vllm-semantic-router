@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-chat-ui
+  labels:
+    app.kubernetes.io/name: chat-ui
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: chat-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: chat-ui
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: chat-ui
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: chat-ui
+          image: {{ .Values.chatUI.image.repository }}:{{ .Values.chatUI.image.tag }}
+          imagePullPolicy: {{ .Values.chatUI.image.pullPolicy }}
+          ports:
+            - containerPort: 3000
+              name: http
+          securityContext:
+            allowPrivilegeEscalation: false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-chat-ui
+  labels:
+    app.kubernetes.io/name: chat-ui
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+  selector:
+    app.kubernetes.io/name: chat-ui
+    app.kubernetes.io/instance: {{ .Release.Name }}

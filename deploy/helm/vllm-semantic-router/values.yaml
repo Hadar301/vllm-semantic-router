@@ -1,32 +1,129 @@
 # vLLM Semantic Router Quickstart - Helm Values
-# See deploy/openshift/ for OpenShift-specific deployment manifests
 
-# -- Research agent: Qwen3-8B with reasoning
+# --- Semantic Router (custom components, not from ai-architecture-charts) ---
+semanticRouter:
+  image:
+    repository: ghcr.io/vllm-project/semantic-router/extproc
+    tag: latest
+    pullPolicy: IfNotPresent
+  envoy:
+    image: envoyproxy/envoy:v1.35.3
+  resources:
+    requests:
+      memory: "3Gi"
+      cpu: "1"
+    limits:
+      memory: "6Gi"
+      cpu: "2"
+
+srDashboard:
+  enabled: true
+  image:
+    repository: ghcr.io/vllm-project/semantic-router/dashboard
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# --- Chat UI + API (custom application) ---
+chatUI:
+  image:
+    repository: quay.io/rh-ai-quickstart/vllm-semantic-router-chat-ui
+    tag: latest
+    pullPolicy: IfNotPresent
+
+api:
+  image:
+    repository: quay.io/rh-ai-quickstart/vllm-semantic-router-api
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# --- Model Serving (3x llm-service via ai-architecture-charts) ---
+
+# Research agent: Qwen3-8B with reasoning
 llm-service-research:
-  model:
-    name: Qwen/Qwen3-8B
-    servedModelName: research-agent
+  enabled: true
+  secret:
+    hf_token: ""
+    enabled: true
+  models:
+    qwen3-8b:
+      id: Qwen/Qwen3-8B
+      enabled: true
+      resources:
+        limits:
+          cpu: "4"
+          memory: 32Gi
+        requests:
+          cpu: "2"
+          memory: 16Gi
+      args:
+        - --max-model-len
+        - "4096"
+        - --max-num-seqs
+        - "16"
 
-# -- RAG backing model: Granite 3.1-8B
+# RAG backing model: Granite 3.1-8B
 llm-service-rag:
-  model:
-    name: ibm-granite/granite-3.1-8b-instruct
-    servedModelName: rag-model
+  enabled: true
+  secret:
+    hf_token: ""
+    enabled: true
+  models:
+    granite-3-1-8b-instruct:
+      id: ibm-granite/granite-3.1-8b-instruct
+      enabled: true
+      resources:
+        limits:
+          cpu: "4"
+          memory: 32Gi
+        requests:
+          cpu: "2"
+          memory: 16Gi
+      args:
+        - --max-model-len
+        - "4096"
+        - --max-num-seqs
+        - "16"
 
-# -- General conversation: Granite 3.1-2B
+# General conversation: Granite 3.1-2B
 llm-service-general:
-  model:
-    name: ibm-granite/granite-3.1-2b-instruct
-    servedModelName: general-agent
+  enabled: true
+  secret:
+    hf_token: ""
+    enabled: true
+  models:
+    granite-3-1-2b-instruct:
+      id: ibm-granite/granite-3.1-2b-instruct
+      enabled: true
+      resources:
+        limits:
+          cpu: "2"
+          memory: 16Gi
+        requests:
+          cpu: "1"
+          memory: 8Gi
+      args:
+        - --max-model-len
+        - "4096"
+        - --max-num-seqs
+        - "32"
 
-# -- Llamastack for RAG agent orchestration
-llama-stack: {}
+# --- RAG Infrastructure ---
 
-# -- pgvector for RAG embeddings
-pgvector: {}
+llama-stack:
+  enabled: true
+  pgvector:
+    enabled: true
 
-# -- MinIO for RAG document storage
-minio: {}
+pgvector:
+  enabled: true
+  secret:
+    dbname: semantic_router
 
-# -- Ingestion pipeline for document processing
-ingestion-pipeline: {}
+minio:
+  enabled: true
+  secret:
+    user: minioadmin
+    password: minioadmin
+
+ingestion-pipeline:
+  enabled: true

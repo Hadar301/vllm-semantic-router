@@ -1,0 +1,35 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-chat-ui
+  labels:
+    app.kubernetes.io/name: chat-ui
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  to:
+    kind: Service
+    name: {{ include "vllm-semantic-router.fullname" . }}-chat-ui
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+---
+{{- if .Values.srDashboard.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-dashboard
+  labels:
+    app.kubernetes.io/name: sr-dashboard
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  to:
+    kind: Service
+    name: {{ include "vllm-semantic-router.fullname" . }}-dashboard
+  port:
+    targetPort: http
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+{{- end }}

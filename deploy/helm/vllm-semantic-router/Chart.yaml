@@ -16,25 +16,32 @@ sources:
 dependencies:
   - name: llm-service
     alias: llm-service-research
-    version: ">=0.0.0"
+    version: "0.5.9"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: llm-service-research.enabled
   - name: llm-service
     alias: llm-service-rag
-    version: ">=0.0.0"
+    version: "0.5.9"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: llm-service-rag.enabled
   - name: llm-service
     alias: llm-service-general
-    version: ">=0.0.0"
+    version: "0.5.9"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: llm-service-general.enabled
   - name: llama-stack
-    version: ">=0.0.0"
+    version: "0.7.4"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: llama-stack.enabled
   - name: pgvector
-    version: ">=0.0.0"
+    version: "0.5.5"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: pgvector.enabled
   - name: minio
-    version: ">=0.0.0"
+    version: "0.5.5"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: minio.enabled
   - name: ingestion-pipeline
-    version: ">=0.0.0"
+    version: "0.7.4"
     repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+    condition: ingestion-pipeline.enabled
