@@ -33,8 +33,26 @@ data:
                           routes:
                             - match:
                                 prefix: "/"
+                                headers:
+                                  - name: x-selected-model
+                                    string_match:
+                                      exact: research-agent
                               route:
-                                cluster: llm_backend
+                                cluster: research_backend
+                                timeout: 300s
+                            - match:
+                                prefix: "/"
+                                headers:
+                                  - name: x-selected-model
+                                    string_match:
+                                      exact: rag-agent
+                              route:
+                                cluster: rag_backend
+                                timeout: 300s
+                            - match:
+                                prefix: "/"
+                              route:
+                                cluster: general_backend
                                 timeout: 300s
                     http_filters:
                       - name: envoy.filters.http.ext_proc
@@ -53,19 +71,45 @@ data:
                         typed_config:
                           "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
       clusters:
-        - name: llm_backend
+        - name: general_backend
           connect_timeout: 30s
           type: STRICT_DNS
           lb_policy: ROUND_ROBIN
           load_assignment:
-            cluster_name: llm_backend
+            cluster_name: general_backend
             endpoints:
               - lb_endpoints:
                   - endpoint:
                       address:
                         socket_address:
-                          address: {{ include "vllm-semantic-router.fullname" . }}-router
-                          port_value: 8899
+                          address: granite-3-1-2b-instruct-vllm
+                          port_value: 80
+        - name: research_backend
+          connect_timeout: 30s
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: research_backend
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: qwen3-8b-vllm
+                          port_value: 80
+        - name: rag_backend
+          connect_timeout: 30s
+          type: STRICT_DNS
+          lb_policy: ROUND_ROBIN
+          load_assignment:
+            cluster_name: rag_backend
+            endpoints:
+              - lb_endpoints:
+                  - endpoint:
+                      address:
+                        socket_address:
+                          address: llamastack
+                          port_value: 8321
         - name: ext_proc_cluster
           connect_timeout: 30s
           type: STRICT_DNS

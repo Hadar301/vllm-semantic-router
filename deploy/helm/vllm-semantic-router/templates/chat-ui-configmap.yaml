@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-chat-ui-nginx
+  labels:
+    app.kubernetes.io/name: chat-ui
+    app.kubernetes.io/instance: {{ .Release.Name }}
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /dev/stderr;
+    pid /tmp/nginx.pid;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include /etc/nginx/mime.types;
+        default_type application/octet-stream;
+        sendfile on;
+        client_body_temp_path /tmp/client_body;
+        proxy_temp_path /tmp/proxy;
+        fastcgi_temp_path /tmp/fastcgi;
+        uwsgi_temp_path /tmp/uwsgi;
+        scgi_temp_path /tmp/scgi;
+        access_log /dev/stdout;
+
+        server {
+            listen 8080;
+            server_name _;
+            root /opt/app-root/src;
+            index index.html;
+
+            location /api/ {
+                proxy_pass http://{{ include "vllm-semantic-router.fullname" . }}-api:8000;
+                proxy_http_version 1.1;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header Connection '';
+                proxy_buffering off;
+                proxy_cache off;
+                chunked_transfer_encoding off;
+            }
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+        }
+    }

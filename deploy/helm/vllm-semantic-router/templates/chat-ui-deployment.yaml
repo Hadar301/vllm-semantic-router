@@ -23,10 +23,19 @@ spec:
           image: {{ .Values.chatUI.image.repository }}:{{ .Values.chatUI.image.tag }}
           imagePullPolicy: {{ .Values.chatUI.image.pullPolicy }}
           ports:
-            - containerPort: 3000
+            - containerPort: 8080
               name: http
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
           securityContext:
             allowPrivilegeEscalation: false
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: {{ include "vllm-semantic-router.fullname" . }}-chat-ui-nginx
 ---
 apiVersion: v1
 kind: Service
@@ -40,7 +49,7 @@ spec:
   ports:
     - name: http
       port: 3000
-      targetPort: 3000
+      targetPort: 8080
   selector:
     app.kubernetes.io/name: chat-ui
     app.kubernetes.io/instance: {{ .Release.Name }}

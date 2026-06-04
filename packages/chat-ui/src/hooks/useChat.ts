@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { streamChat } from "../services/api";
 import type { ChatMessage } from "../types/chat";
 
@@ -8,8 +8,6 @@ export function useChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-
   const sendMessage = useCallback(
     async (text: string) => {
       if (!text.trim() || isStreaming) return;

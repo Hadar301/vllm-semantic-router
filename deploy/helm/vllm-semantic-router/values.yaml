@@ -2,6 +2,7 @@
 
 # --- Semantic Router (custom components, not from ai-architecture-charts) ---
 semanticRouter:
+  hfToken: ""
   image:
     repository: ghcr.io/vllm-project/semantic-router/extproc
     tag: latest
@@ -26,15 +27,15 @@ srDashboard:
 # --- Chat UI + API (custom application) ---
 chatUI:
   image:
-    repository: quay.io/rh-ai-quickstart/vllm-semantic-router-chat-ui
+    repository: quay.io/hacohen/vllm-semantic-router-chat-ui
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
 
 api:
   image:
-    repository: quay.io/rh-ai-quickstart/vllm-semantic-router-api
+    repository: quay.io/hacohen/vllm-semantic-router-api
     tag: latest
-    pullPolicy: IfNotPresent
+    pullPolicy: Always
 
 # --- Model Serving (3x llm-service via ai-architecture-charts) ---
 
@@ -48,6 +49,13 @@ llm-service-research:
     qwen3-8b:
       id: Qwen/Qwen3-8B
       enabled: true
+      tolerations:
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+          operator: Exists
+        - key: g5-gpu
+          effect: NoSchedule
+          operator: Exists
       resources:
         limits:
           cpu: "4"
@@ -60,6 +68,8 @@ llm-service-research:
         - "4096"
         - --max-num-seqs
         - "16"
+        - --served-model-name
+        - "research-agent"
 
 # RAG backing model: Granite 3.1-8B
 llm-service-rag:
@@ -71,6 +81,13 @@ llm-service-rag:
     granite-3-1-8b-instruct:
       id: ibm-granite/granite-3.1-8b-instruct
       enabled: true
+      tolerations:
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+          operator: Exists
+        - key: g5-gpu
+          effect: NoSchedule
+          operator: Exists
       resources:
         limits:
           cpu: "4"
@@ -83,6 +100,8 @@ llm-service-rag:
         - "4096"
         - --max-num-seqs
         - "16"
+        - --served-model-name
+        - "rag-agent"
 
 # General conversation: Granite 3.1-2B
 llm-service-general:
@@ -94,6 +113,13 @@ llm-service-general:
     granite-3-1-2b-instruct:
       id: ibm-granite/granite-3.1-2b-instruct
       enabled: true
+      tolerations:
+        - key: nvidia.com/gpu
+          effect: NoSchedule
+          operator: Exists
+        - key: g5-gpu
+          effect: NoSchedule
+          operator: Exists
       resources:
         limits:
           cpu: "2"
@@ -106,6 +132,8 @@ llm-service-general:
         - "4096"
         - --max-num-seqs
         - "32"
+        - --served-model-name
+        - "general-agent"
 
 # --- RAG Infrastructure ---
 

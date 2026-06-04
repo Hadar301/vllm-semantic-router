@@ -24,6 +24,11 @@ spec:
         - name: extproc
           image: {{ .Values.semanticRouter.image.repository }}:{{ .Values.semanticRouter.image.tag }}
           imagePullPolicy: {{ .Values.semanticRouter.image.pullPolicy }}
+          env:
+            - name: HF_TOKEN
+              value: {{ .Values.semanticRouter.hfToken | default "" | quote }}
+            - name: HF_HOME
+              value: /tmp/hf-cache
           ports:
             - containerPort: 50051
               name: grpc
@@ -36,6 +41,8 @@ spec:
               mountPath: /app/config/config.yaml
               subPath: config.yaml
               readOnly: true
+            - name: models
+              mountPath: /app/models
           resources:
             {{- toYaml .Values.semanticRouter.resources | nindent 12 }}
           securityContext:
@@ -77,3 +84,5 @@ spec:
         - name: envoy-config
           configMap:
             name: {{ include "vllm-semantic-router.fullname" . }}-envoy
+        - name: models
+          emptyDir: {}

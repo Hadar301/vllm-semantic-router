@@ -23,6 +23,8 @@ spec:
         - name: dashboard
           image: {{ .Values.srDashboard.image.repository }}:{{ .Values.srDashboard.image.tag }}
           imagePullPolicy: {{ .Values.srDashboard.image.pullPolicy }}
+          command: ["/bin/sh"]
+          args: ["/app/start-dashboard.sh", "/app/config/config.yaml"]
           ports:
             - containerPort: 8700
               name: http
@@ -38,12 +40,16 @@ spec:
               mountPath: /app/config/config.yaml
               subPath: config.yaml
               readOnly: true
+            - name: data
+              mountPath: /app/data
           securityContext:
             allowPrivilegeEscalation: false
       volumes:
         - name: config
           configMap:
             name: {{ include "vllm-semantic-router.fullname" . }}-config
+        - name: data
+          emptyDir: {}
 ---
 apiVersion: v1
 kind: Service

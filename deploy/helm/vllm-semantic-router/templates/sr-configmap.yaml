@@ -25,7 +25,7 @@ data:
           reasoning_family: qwen3
           backend_refs:
             - name: research-vllm
-              endpoint: {{ include "vllm-semantic-router.fullname" . }}-llm-research:8000
+              endpoint: qwen3-8b-vllm:80
               protocol: http
               weight: 100
               type: chat
@@ -38,7 +38,7 @@ data:
         - name: general-agent
           backend_refs:
             - name: general-vllm
-              endpoint: {{ include "vllm-semantic-router.fullname" . }}-llm-general:8000
+              endpoint: granite-3-1-2b-instruct-vllm:80
               protocol: http
               weight: 100
               type: chat
@@ -114,6 +114,14 @@ data:
           - name: general
         keywords:
           - name: document-terms
+            operator: OR
+            terms:
+              - document
+              - documentation
+              - knowledge base
+              - search
+              - lookup
+              - reference
       modelCards:
         - name: research-agent
         - name: rag-agent
