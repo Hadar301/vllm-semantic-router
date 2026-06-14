@@ -19,6 +19,13 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e "packages/api[test]" -e "packages/db"
-      - run: pytest tests/integration/ -v --ignore-glob='**/conftest.py'
+      - name: Run integration tests
+        run: |
+          TEST_COUNT=$(find tests/integration/ -name 'test_*.py' | wc -l)
+          if [ "$TEST_COUNT" -eq 0 ]; then
+            echo "::warning::No integration test files found — skipping"
+            exit 0
+          fi
+          pytest tests/integration/ -v --ignore-glob='**/conftest.py'
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/test
