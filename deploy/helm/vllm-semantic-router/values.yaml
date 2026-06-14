@@ -139,8 +139,15 @@ llm-service-general:
 
 llama-stack:
   enabled: true
+  image:
+    repository: docker.io/ogxai/distribution-starter
+    tag: "0.6.1"
   pgvector:
     enabled: true
+  models:
+    granite-3-1-8b-instruct:
+      id: rag-agent
+      enabled: true
 
 pgvector:
   enabled: true

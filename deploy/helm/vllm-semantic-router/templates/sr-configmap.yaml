@@ -77,9 +77,9 @@ data:
             operator: OR
             conditions:
               - type: complexity
-                name: high
+                name: needs_reasoning
               - type: domain
-                name: research
+                name: "computer science"
           modelRefs:
             - model: research-agent
               use_reasoning: true
@@ -89,8 +89,8 @@ data:
           rules:
             operator: OR
             conditions:
-              - type: domain
-                name: knowledge-base
+              - type: keyword
+                name: rag-keywords
               - type: keyword
                 name: document-terms
           modelRefs:
@@ -103,25 +103,50 @@ data:
             operator: OR
             conditions:
               - type: domain
-                name: general
+                name: other
           modelRefs:
             - model: general-agent
               use_reasoning: false
       signals:
         domains:
-          - name: research
-          - name: knowledge-base
-          - name: general
+          - name: "computer science"
+            description: Computer science, engineering, and technical research queries.
+            mmlu_categories: ["computer science"]
+          - name: health
+            description: Health and medical information requests.
+            mmlu_categories: [health]
+          - name: other
+            description: General fallback traffic.
+            mmlu_categories: [other]
         keywords:
           - name: document-terms
             operator: OR
-            terms:
-              - document
-              - documentation
-              - knowledge base
-              - search
-              - lookup
-              - reference
+            method: bm25
+            keywords: ["document", "documentation", "knowledge base", "search", "lookup", "reference"]
+            case_sensitive: false
+            bm25_threshold: 0.1
+          - name: rag-keywords
+            operator: OR
+            method: bm25
+            keywords: ["openshift", "red hat", "kubernetes", "container", "deployment", "operator"]
+            case_sensitive: false
+            bm25_threshold: 0.1
+        complexity:
+          - name: needs_reasoning
+            threshold: 0.7
+            description: Escalate multi-step reasoning or synthesis-heavy prompts.
+            hard:
+              candidates:
+                - solve this step by step
+                - compare multiple tradeoffs
+                - analyze the root cause
+                - explain in detail
+            easy:
+              candidates:
+                - answer briefly
+                - quick summary
+                - simple rewrite
+                - hello
       modelCards:
         - name: research-agent
         - name: rag-agent

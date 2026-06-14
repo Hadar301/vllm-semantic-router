@@ -26,7 +26,10 @@ spec:
           imagePullPolicy: {{ .Values.semanticRouter.image.pullPolicy }}
           env:
             - name: HF_TOKEN
-              value: {{ .Values.semanticRouter.hfToken | default "" | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "vllm-semantic-router.fullname" . }}-hf-token
+                  key: token
             - name: HF_HOME
               value: /tmp/hf-cache
           ports:
