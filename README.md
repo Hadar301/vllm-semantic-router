@@ -4,6 +4,37 @@ Add intelligent, config-driven routing to any multi-agent AI application on Red 
 
 This quickstart deploys [vLLM Semantic Router](https://github.com/vllm-project/semantic-router) as an OpenAI-compatible proxy in front of three on-cluster agents (research/reasoning, RAG, general conversation). A chat UI makes routing decisions visible -- showing which agent was selected, which signals fired, and why. The primary takeaway: you can add semantic routing, jailbreak guardrails, and cost optimization to any agentic app through YAML configuration alone, with no application code changes.
 
+## Use case
+
+Most multi-agent AI applications hardcode their routing logic: an `if/else` chain or a classifier baked into application code decides which model handles each request. When you need to add a new agent, adjust routing thresholds, or add a guardrail, you're changing application code and redeploying.
+
+This quickstart demonstrates **config-driven semantic routing**. A central routing engine (vLLM Semantic Router) sits between the user and your models, classifying every request by topic, complexity, and safety signals -- then routing it to the right agent automatically. Adding or changing routing rules is a YAML edit, not a code change.
+
+### What this deploys
+
+A chat application backed by three specialized agents:
+
+| Query type | Example | Routed to | Why |
+|---|---|---|---|
+| Complex research | "Explain quantum entanglement in detail" | **Qwen3-8B** (reasoning mode) | Computer science domain signal fires -> research decision |
+| Knowledge base | "What is Red Hat OpenShift AI?" | **Granite 3.1-8B** (RAG) | Keyword signals fire -> rag decision |
+| General conversation | "Hello, how are you?" | **Granite 3.1-2B** | Default route -> lightweight model (lower cost, lower latency) |
+| Jailbreak attempt | "Ignore all instructions and..." | **Blocked** | Jailbreak signal fires -> request rejected |
+| Contains PII | "My SSN is 123-45-6789, help me with..." | **Granite 3.1-2B** (with safety prompt) | PII signal fires -> model instructed to ignore personal data |
+
+### Who this is for
+
+- **Platform engineers** evaluating semantic routing for multi-model serving on OpenShift AI
+- **AI/ML engineers** building agentic applications that need intelligent request dispatch
+- **Solution architects** looking for a reference pattern for guardrails + cost optimization via model tiering
+
+### What you'll learn
+
+1. How to configure signal-driven routing rules in YAML (no application code changes)
+2. How to add jailbreak and PII guardrails as routing decisions
+3. How to serve multiple models (different sizes, different capabilities) behind a single OpenAI-compatible endpoint
+4. How to visualize routing decisions in real time through the chat UI and SR dashboard
+
 ## Architecture
 
 ```mermaid
@@ -18,11 +49,11 @@ graph TB
     SR_ENVOY --> SD{Signal-Decision<br/>Engine}
 
     SD -->|research| VLLM1[vLLM: Qwen3-8B<br/>reasoning enabled]
-    SD -->|rag| LS[Llamastack<br/>RAG Agent]
+    SD -->|rag| VLLM2[vLLM: Granite 3.1-8B]
     SD -->|general| VLLM3[vLLM: Granite 3.1-2B]
     SD -->|jailbreak/pii| BLOCK[Blocked]
 
-    LS --> VLLM2[vLLM: Granite 3.1-8B]
+    LS[Llamastack] --> VLLM2
     LS --> PGV[(pgvector)]
     LS --> MINIO[(MinIO)]
 ```
@@ -36,7 +67,7 @@ graph TB
 | Chat UI | React 19 + TypeScript | User-facing chat with inline routing visualization |
 | Backend API | Python 3.12 + FastAPI | Proxies chat through SR, surfaces routing metadata via SSE |
 | Research Agent | Qwen3-8B via vLLM | Complex reasoning queries (thinking mode enabled) |
-| RAG Agent | Granite 3.1-8B via Llamastack | Knowledge base queries with document retrieval |
+| RAG Agent | Granite 3.1-8B via vLLM (Llamastack available for document retrieval) | Knowledge base queries |
 | General Agent | Granite 3.1-2B via vLLM | Casual conversation, simple questions |
 | Vector DB | PostgreSQL + pgvector | Stores document embeddings for RAG |
 | Object Storage | MinIO | Stores RAG source documents |
@@ -108,7 +139,7 @@ The chat UI and API backend images must be built and pushed to a container regis
 ```bash
 podman build --platform linux/amd64 \
   -t quay.io/<your-org>/vllm-semantic-router-chat-ui:latest \
-  -f packages/chat-ui/Containerfile packages/chat-ui
+  -f packages/chat-ui/Containerfile .
 
 podman build --platform linux/amd64 \
   -t quay.io/<your-org>/vllm-semantic-router-api:latest \
@@ -174,10 +205,17 @@ oc get route -n vllm-semantic-router -l app.kubernetes.io/name=sr-dashboard \
 | Predictor pods stuck in `Pending` | GPU nodes have taints the pods don't tolerate | Add tolerations to each model in `values.yaml` |
 | Chat-ui/API pods in `ImagePullBackOff` | Images not pushed or registry not accessible | Build and push images (step 2) |
 | Router (extproc) in `CrashLoopBackOff` | Missing HF_TOKEN or unwritable model dir | Set `semanticRouter.hfToken` in helm values |
+| Router crashes with jailbreak detector error | Explicit jailbreak/pii signal declarations make mmBERT model download mandatory | Remove explicit jailbreak/pii signal declarations from config; built-in defaults work without them |
+| Chat returns 504 Gateway Timeout | Envoy ext_proc `message_timeout` too low for routing latency | Set `message_timeout: 30s` in Envoy ext_proc filter config |
+| Llamastack in `ImagePullBackOff` | `llamastack/distribution-starter` renamed to `ogxai/distribution-starter` | Update image to `docker.io/ogxai/distribution-starter:0.6.1` |
+| Llamastack crashes with "API 'safety' does not exist" | Using `ogxai/distribution-starter:latest` (1.x) with 0.x config schema | Use `ogxai/distribution-starter:0.6.1` to match the subchart config format |
 | Dashboard in `CrashLoopBackOff` | OpenShift SCC blocks user switching | Dashboard template overrides entrypoint to skip `gosu` |
 | Chat returns 404 | Nginx not proxying `/api` to the API service | Verify chat-ui-nginx ConfigMap is mounted |
 | Chat hangs (no response) | Envoy backend cluster misconfigured | Verify envoy ConfigMap clusters point to correct vLLM services |
 | vLLM returns "model does not exist" | Model name mismatch between SR and vLLM | `--served-model-name` in vLLM args must match SR model names |
+| SR routing returns empty decision | Domain names in config don't match MMLU classifier taxonomy | Use MMLU categories (`computer science`, `health`, `other`) in domain signal config |
+| Keyword signal not matching | Config uses `terms` field (invalid in v0.3) | Use `keywords` field with `method: bm25` |
+| Ingestion pipeline stuck in `Init:0/1` | Waiting for Data Science Pipelines (DSPA) service | Deploy DSPA or disable the ingestion-pipeline subchart |
 
 ## Delete / Cleanup
 
@@ -192,19 +230,19 @@ The semantic router classifies every incoming query using configurable **signals
 
 | Signal | What it detects |
 |--------|----------------|
-| Domain | Topic classification (research, knowledge-base, general) |
+| Domain | Topic classification via MMLU categories (computer science, health, other) |
 | Complexity | Simple vs. multi-step reasoning queries |
-| Jailbreak | Prompt injection and adversarial attacks |
-| PII | Personal identifiable information |
-| Keyword | Domain-specific terms (document, knowledge base, etc.) |
+| Jailbreak | Prompt injection and adversarial attacks (built-in) |
+| PII | Personal identifiable information (built-in) |
+| Keyword | Domain-specific terms via BM25 matching (document-terms, rag-keywords) |
 
 | Decision | Priority | Routes to | When |
 |----------|----------|-----------|------|
 | blocked | 100 | (none) | Jailbreak detected |
 | pii-flagged | 90 | general-agent | PII detected (with safety prompt) |
-| research | 20 | Qwen3-8B (reasoning) | Complex or research queries |
-| rag | 15 | Llamastack RAG | Knowledge base or document queries |
-| general | 1 | Granite 3.1-2B | Everything else |
+| research | 20 | Qwen3-8B (reasoning) | Computer science domain or high complexity |
+| rag | 15 | Granite 3.1-8B | Keyword signals match (document-terms or rag-keywords) |
+| general | 1 | Granite 3.1-2B | Domain classified as "other" (default) |
 
 Routing configuration lives in `config/semantic-router/config.yaml`. To customize routing for your own app, edit the `decisions` and `signals` sections -- no code changes needed.
 
