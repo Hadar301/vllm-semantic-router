@@ -16,6 +16,9 @@ semanticRouter:
     limits:
       memory: "6Gi"
       cpu: "2"
+  modelsPersistence:
+    enabled: true
+    size: 20Gi
 
 srDashboard:
   enabled: true
@@ -161,4 +164,4 @@ minio:
     password: minioadmin
 
 ingestion-pipeline:
-  enabled: true
+  enabled: false

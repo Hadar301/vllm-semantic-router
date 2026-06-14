@@ -1,0 +1,16 @@
+{{- if .Values.semanticRouter.modelsPersistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-models
+  labels:
+    app.kubernetes.io/name: semantic-router
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: router
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ .Values.semanticRouter.modelsPersistence.size }}
+{{- end }}

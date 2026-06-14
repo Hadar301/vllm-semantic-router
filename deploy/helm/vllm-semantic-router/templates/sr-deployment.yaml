@@ -88,4 +88,9 @@ spec:
           configMap:
             name: {{ include "vllm-semantic-router.fullname" . }}-envoy
         - name: models
+          {{- if .Values.semanticRouter.modelsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "vllm-semantic-router.fullname" . }}-models
+          {{- else }}
           emptyDir: {}
+          {{- end }}

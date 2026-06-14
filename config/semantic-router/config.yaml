@@ -85,6 +85,11 @@ routing:
             name: needs_reasoning
           - type: domain
             name: "computer science"
+      algorithm:
+        type: session_aware
+        session_aware:
+          base_method: hybrid
+          tool_loop_hard_lock: true
       modelRefs:
         - model: research-agent
           use_reasoning: true
@@ -155,6 +160,16 @@ routing:
             - quick summary
             - simple rewrite
             - hello
+
+  projections:
+    partitions:
+      - name: request_type
+        semantics: exclusive
+        members:
+          - "computer science"
+          - health
+          - other
+        default: other
 
   modelCards:
     - name: research-agent
