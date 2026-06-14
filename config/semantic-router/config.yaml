@@ -20,7 +20,7 @@ providers:
       api_format: openai
       backend_refs:
         - name: research-vllm
-          endpoint: llm-service-research:8000
+          endpoint: llm-research:8000
           protocol: http
           weight: 100
           type: chat
@@ -29,17 +29,18 @@ providers:
       provider_model_id: ibm-granite/granite-3.1-8b-instruct
       api_format: openai
       backend_refs:
-        - name: rag-llamastack
-          endpoint: llamastack:8321
+        - name: rag-vllm
+          endpoint: llm-rag:8000
           protocol: http
           weight: 100
+          type: chat
 
     - name: general-agent
       provider_model_id: ibm-granite/granite-3.1-2b-instruct
       api_format: openai
       backend_refs:
         - name: general-vllm
-          endpoint: llm-service-general:8000
+          endpoint: llm-general:8000
           protocol: http
           weight: 100
           type: chat
@@ -81,9 +82,9 @@ routing:
         operator: OR
         conditions:
           - type: complexity
-            name: high
+            name: needs_reasoning
           - type: domain
-            name: research
+            name: "computer science"
       modelRefs:
         - model: research-agent
           use_reasoning: true
@@ -94,8 +95,8 @@ routing:
       rules:
         operator: OR
         conditions:
-          - type: domain
-            name: knowledge-base
+          - type: keyword
+            name: rag-keywords
           - type: keyword
             name: document-terms
       modelRefs:
@@ -109,18 +110,51 @@ routing:
         operator: OR
         conditions:
           - type: domain
-            name: general
+            name: other
       modelRefs:
         - model: general-agent
           use_reasoning: false
 
   signals:
     domains:
-      - name: research
-      - name: knowledge-base
-      - name: general
+      - name: "computer science"
+        description: Computer science, engineering, and technical research queries.
+        mmlu_categories: ["computer science"]
+      - name: health
+        description: Health and medical information requests.
+        mmlu_categories: [health]
+      - name: other
+        description: General fallback traffic.
+        mmlu_categories: [other]
     keywords:
       - name: document-terms
+        operator: OR
+        method: bm25
+        keywords: ["document", "documentation", "knowledge base", "search", "lookup", "reference"]
+        case_sensitive: false
+        bm25_threshold: 0.1
+      - name: rag-keywords
+        operator: OR
+        method: bm25
+        keywords: ["openshift", "red hat", "kubernetes", "container", "deployment", "operator"]
+        case_sensitive: false
+        bm25_threshold: 0.1
+    complexity:
+      - name: needs_reasoning
+        threshold: 0.7
+        description: Escalate multi-step reasoning or synthesis-heavy prompts.
+        hard:
+          candidates:
+            - solve this step by step
+            - compare multiple tradeoffs
+            - analyze the root cause
+            - explain in detail
+        easy:
+          candidates:
+            - answer briefly
+            - quick summary
+            - simple rewrite
+            - hello
 
   modelCards:
     - name: research-agent
