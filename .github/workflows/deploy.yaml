@@ -8,10 +8,12 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest  # Requires a self-hosted runner with pre-configured oc cluster access
     steps:
       - uses: actions/checkout@v4
       - uses: azure/setup-helm@v4
+      # This workflow assumes the runner has pre-configured cluster credentials
+      # (e.g. a service account kubeconfig or prior `oc login`).
       - run: |
           helm dependency update deploy/helm/vllm-semantic-router
           helm upgrade --install vllm-semantic-router \

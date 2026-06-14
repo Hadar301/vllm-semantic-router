@@ -19,6 +19,6 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install -e "packages/api[test]" -e "packages/db"
-      - run: pytest tests/integration/ -v --ignore-glob='**/conftest.py' || [ $? -eq 5 ]
+      - run: pytest tests/integration/ -v --ignore-glob='**/conftest.py'
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/test

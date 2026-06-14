@@ -1,8 +1,9 @@
 FROM registry.access.redhat.com/ubi9/nodejs-22:latest AS builder
 WORKDIR /opt/app-root/src
-COPY package.json ./
-RUN npm install -g pnpm && pnpm install --ignore-scripts
-COPY . .
+COPY packages/chat-ui/package.json ./
+COPY pnpm-lock.yaml ./
+RUN npm install -g pnpm && pnpm install --frozen-lockfile
+COPY packages/chat-ui/ .
 RUN pnpm build
 
 FROM registry.access.redhat.com/ubi9/nginx-124:latest
