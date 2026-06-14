@@ -180,7 +180,7 @@ helm install vllm-semantic-router deploy/helm/vllm-semantic-router \
   --set semanticRouter.hfToken=$HF_TOKEN
 ```
 
-> The `semanticRouter.hfToken` is required for the router to download embedding models (mmBERT) used for signal classification.
+> The `semanticRouter.hfToken` is required for the router to download embedding models (mmBERT) used for signal classification. A 20Gi PVC is created by default to persist these models across pod restarts. The ingestion pipeline is disabled by default; enable it with `--set ingestion-pipeline.enabled=true` when DSPA is available.
 
 ### 5. Verify
 
@@ -244,7 +244,9 @@ The semantic router classifies every incoming query using configurable **signals
 | rag | 15 | Granite 3.1-8B | Keyword signals match (document-terms or rag-keywords) |
 | general | 1 | Granite 3.1-2B | Domain classified as "other" (default) |
 
-Routing configuration lives in `config/semantic-router/config.yaml`. To customize routing for your own app, edit the `decisions` and `signals` sections -- no code changes needed.
+The config also includes v0.3 features: a `projections` layer that partitions domains into an exclusive `request_type` group, and a `session_aware` algorithm on the research decision that prevents model switches during active tool loops. Jailbreak and PII signals run as built-in defaults.
+
+Routing configuration lives in `config/semantic-router/config.yaml`. To customize routing for your own app, edit the `decisions`, `signals`, and `projections` sections -- no code changes needed.
 
 ## Environment Variables
 
