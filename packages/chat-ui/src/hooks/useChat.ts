@@ -1,11 +1,22 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { streamChat } from "../services/api";
 import type { ChatMessage } from "../types/chat";
 
 let nextId = 0;
 
 export function useChat() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, _setMessages] = useState<ChatMessage[]>([]);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  const setMessages = useCallback(
+    (update: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+      _setMessages((prev) => {
+        const next = typeof update === "function" ? update(prev) : update;
+        messagesRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedMessageId, setSelectedMessageId] = useState<string | null>(null);
   const sendMessage = useCallback(
@@ -30,8 +41,13 @@ export function useChat() {
       setSelectedMessageId(assistantId);
       setIsStreaming(true);
 
+      const history = [...messagesRef.current.filter((m) => !m.isStreaming)].map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
       try {
-        for await (const event of streamChat(text.trim())) {
+        for await (const event of streamChat(history)) {
           switch (event.type) {
             case "routing":
               setMessages((prev) =>

@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 
-from src.schemas.chat import RoutingMetadata
+from src.schemas.chat import ChatMessage, RoutingMetadata
 
 
 class RouterClient:
@@ -24,10 +24,10 @@ class RouterClient:
         return RoutingMetadata.from_eval_response(response.json())
 
     @asynccontextmanager
-    async def stream_chat(self, message: str) -> AsyncIterator[httpx.Response]:
+    async def stream_chat(self, messages: list[ChatMessage]) -> AsyncIterator[httpx.Response]:
         body = {
             "model": "auto",
-            "messages": [{"role": "user", "content": message}],
+            "messages": [{"role": m.role, "content": m.content} for m in messages],
             "stream": True,
         }
         async with self._client.stream(

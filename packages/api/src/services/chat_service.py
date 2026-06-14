@@ -4,7 +4,7 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator
 
-from src.schemas.chat import DeltaEvent, DoneEvent, ErrorEvent, RoutingEvent, RoutingMetadata
+from src.schemas.chat import ChatMessage, DeltaEvent, DoneEvent, ErrorEvent, RoutingEvent, RoutingMetadata
 from src.services.router_client import RouterClient, is_done_line, parse_sse_content
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,14 @@ class ChatService:
     def __init__(self, router_client: RouterClient) -> None:
         self._router = router_client
 
-    async def stream_response(self, message: str) -> AsyncGenerator[str, None]:
-        eval_task = asyncio.create_task(self._safe_eval(message))
+    async def stream_response(self, messages: list[ChatMessage]) -> AsyncGenerator[str, None]:
+        last_user_msg = next(
+            (m.content for m in reversed(messages) if m.role == "user"), ""
+        )
+        eval_task = asyncio.create_task(self._safe_eval(last_user_msg))
 
         try:
-            async with self._router.stream_chat(message) as response:
+            async with self._router.stream_chat(messages) as response:
                 routing = await eval_task
                 yield _sse(RoutingEvent(metadata=routing))
 

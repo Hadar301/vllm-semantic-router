@@ -2,11 +2,13 @@ import type { StreamEvent } from "../types/chat";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
-export async function* streamChat(message: string): AsyncGenerator<StreamEvent> {
+export async function* streamChat(
+  messages: Array<{ role: string; content: string }>,
+): AsyncGenerator<StreamEvent> {
   const response = await fetch(`${API_BASE}/api/v1/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ message }),
+    body: JSON.stringify({ messages }),
   });
 
   if (!response.ok) {

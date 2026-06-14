@@ -17,7 +17,7 @@ async def chat(body: ChatRequest, request: Request) -> StreamingResponse:
     client = _get_router_client(request)
     service = ChatService(client)
     return StreamingResponse(
-        service.stream_response(body.message),
+        service.stream_response(body.messages),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
