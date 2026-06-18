@@ -23,6 +23,8 @@ data:
       models:
         - name: research-agent
           reasoning_family: qwen3
+          provider_model_id: Qwen/Qwen3-8B
+          api_format: openai
           backend_refs:
             - name: research-vllm
               endpoint: qwen3-8b-vllm:80
@@ -30,12 +32,17 @@ data:
               weight: 100
               type: chat
         - name: rag-agent
+          provider_model_id: ibm-granite/granite-3.1-8b-instruct
+          api_format: openai
           backend_refs:
-            - name: rag-llamastack
-              endpoint: llamastack:8321
+            - name: rag-vllm
+              endpoint: granite-3-1-8b-instruct-vllm:80
               protocol: http
               weight: 100
+              type: chat
         - name: general-agent
+          provider_model_id: ibm-granite/granite-3.1-2b-instruct
+          api_format: openai
           backend_refs:
             - name: general-vllm
               endpoint: granite-3-1-2b-instruct-vllm:80
