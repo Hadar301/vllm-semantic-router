@@ -1,0 +1,16 @@
+[project]
+name = "vllm-semantic-router-ingestion"
+version = "0.1.0"
+description = "Document ingestion pipeline for RAG agent"
+requires-python = ">=3.12"
+dependencies = [
+    "boto3>=1.35",
+    "llama-stack-client>=0.2",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"

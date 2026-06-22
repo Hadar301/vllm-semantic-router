@@ -1,0 +1,34 @@
+name: Integration Tests
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports: ["5432:5432"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e "packages/api[test]" -e "packages/db"
+      - name: Run integration tests
+        run: |
+          TEST_COUNT=$(find tests/integration/ -name 'test_*.py' | wc -l)
+          if [ "$TEST_COUNT" -eq 0 ]; then
+            echo "::warning::No integration test files found — skipping"
+            exit 0
+          fi
+          pytest tests/integration/ -v --ignore-glob='**/conftest.py'
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/test

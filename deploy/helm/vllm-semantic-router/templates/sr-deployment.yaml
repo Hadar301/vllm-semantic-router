@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "vllm-semantic-router.fullname" . }}-router
+  labels:
+    app.kubernetes.io/name: semantic-router
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: router
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: semantic-router
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: router
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: semantic-router
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: router
+    spec:
+      containers:
+        - name: extproc
+          image: {{ .Values.semanticRouter.image.repository }}:{{ .Values.semanticRouter.image.tag }}
+          imagePullPolicy: {{ .Values.semanticRouter.image.pullPolicy }}
+          env:
+            - name: HF_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "vllm-semantic-router.fullname" . }}-hf-token
+                  key: token
+            - name: HF_HOME
+              value: /tmp/hf-cache
+          ports:
+            - containerPort: 50051
+              name: grpc
+            - containerPort: 8080
+              name: api
+            - containerPort: 9190
+              name: metrics
+          volumeMounts:
+            - name: config
+              mountPath: /app/config/config.yaml
+              subPath: config.yaml
+              readOnly: true
+            - name: models
+              mountPath: /app/models
+          resources:
+            {{- toYaml .Values.semanticRouter.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          livenessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: 50051
+            initialDelaySeconds: 90
+            periodSeconds: 30
+        - name: envoy
+          image: {{ .Values.semanticRouter.envoy.image }}
+          ports:
+            - containerPort: 8801
+              name: http
+          command: ["/usr/local/bin/envoy"]
+          args: ["-c", "/etc/envoy/envoy.yaml"]
+          volumeMounts:
+            - name: envoy-config
+              mountPath: /etc/envoy
+              readOnly: true
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "vllm-semantic-router.fullname" . }}-config
+        - name: envoy-config
+          configMap:
+            name: {{ include "vllm-semantic-router.fullname" . }}-envoy
+        - name: models
+          {{- if .Values.semanticRouter.modelsPersistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "vllm-semantic-router.fullname" . }}-models
+          {{- else }}
+          emptyDir: {}
+          {{- end }}

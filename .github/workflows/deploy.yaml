@@ -1,0 +1,31 @@
+name: Deploy
+on:
+  workflow_dispatch:
+    inputs:
+      namespace:
+        description: "OpenShift namespace"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      # This workflow assumes the runner has pre-configured cluster credentials
+      # (e.g. a service account kubeconfig or prior `oc login`).
+      - run: |
+          helm dependency update deploy/helm/vllm-semantic-router
+          helm upgrade --install vllm-semantic-router \
+            deploy/helm/vllm-semantic-router \
+            -n "$NAMESPACE" \
+            --set semanticRouter.hfToken="$HF_TOKEN" \
+            --set llm-service-research.secret.hf_token="$HF_TOKEN" \
+            --set llm-service-rag.secret.hf_token="$HF_TOKEN" \
+            --set llm-service-general.secret.hf_token="$HF_TOKEN"
+        env:
+          NAMESPACE: ${{ github.event.inputs.namespace }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
