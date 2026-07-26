@@ -167,3 +167,42 @@ minio:
 
 ingestion-pipeline:
   enabled: false
+
+# --- GuideLLM Benchmarking ---
+# Deploy a one-shot Job that benchmarks all three model endpoints.
+# Usage:
+#   make benchmark          (deploys Job and waits for completion)
+#   make benchmark-results  (copies results to ./benchmark-results/)
+#
+# Or manually:
+#   helm upgrade --install ... --set benchmark.enabled=true
+#   helm upgrade --install ... --set benchmark.enabled=false  # cleanup
+benchmark:
+  enabled: false
+  image: registry.access.redhat.com/ubi9/python-311:latest
+  # HuggingFace model IDs for tokenizer resolution (not model download).
+  tokenizers:
+    general: ibm-granite/granite-3.1-2b-instruct
+    rag: ibm-granite/granite-3.1-8b-instruct
+    research: Qwen/Qwen3-8B
+  # Per-model benchmark profiles.
+  # general (CPU): synchronous + small requests — CPU inference is ~10-60s/req.
+  # rag/research (GPU): concurrent sweep — GPU can handle parallel load.
+  models:
+    general:
+      profile: "kind=synchronous"
+      constraint: "kind=max_requests,count=5"
+      promptTokens: 128
+      outputTokens: 32
+    rag:
+      profile: "kind=sweep"
+      constraint: "kind=max_duration,seconds=60"
+      promptTokens: 512
+      outputTokens: 128
+    research:
+      profile: "kind=sweep"
+      constraint: "kind=max_duration,seconds=60"
+      promptTokens: 512
+      outputTokens: 128
+  results:
+    pvcSize: 5Gi

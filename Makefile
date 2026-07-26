@@ -5,7 +5,7 @@ HELM_RELEASE  := vllm-semantic-router
 HELM_NS       := hacohen-vllm-semantic-router-qs
 
 help:
-	@echo "Targets: setup, dev, lint, test, test-integration, test-e2e, eval, deploy, deploy-gpu, deploy-cpu, undeploy"
+	@echo "Targets: setup, dev, lint, test, test-integration, test-e2e, eval, benchmark, benchmark-results, deploy, deploy-gpu, deploy-cpu, undeploy"
 
 setup:
 	pnpm install
@@ -38,6 +38,24 @@ test-e2e:
 
 eval:
 	uv run eval/eval.py $(ARGS)
+
+benchmark:
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) -n $(HELM_NS) \
+	  --set benchmark.enabled=true \
+	  $(HELM_FLAGS)
+	@echo "Waiting for benchmark job to complete (up to 30m)..."
+	oc wait -n $(HELM_NS) job/$(HELM_RELEASE)-benchmark \
+	  --for=condition=complete --timeout=30m
+
+benchmark-results:
+	$(eval BENCH_POD := $(shell oc get pod -n $(HELM_NS) \
+	  -l job-name=$(HELM_RELEASE)-benchmark \
+	  -o jsonpath='{.items[0].metadata.name}' 2>/dev/null))
+	@test -n "$(BENCH_POD)" || (echo "No benchmark pod found. Run 'make benchmark' first."; exit 1)
+	mkdir -p benchmark-results
+	oc cp -n $(HELM_NS) $(BENCH_POD):/results ./benchmark-results/
+	@echo "Results saved to ./benchmark-results/"
+	@ls benchmark-results/*/report.html 2>/dev/null | sed 's/^/  /'
 
 helm-lint:
 	helm lint deploy/helm/vllm-semantic-router/
