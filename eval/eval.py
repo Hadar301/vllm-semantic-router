@@ -31,6 +31,7 @@ from tabulate import tabulate
 
 # ── Schemas ──────────────────────────────────────────────────────────────────
 
+
 class EvalCase(BaseModel):
     id: str
     input: str
@@ -75,6 +76,7 @@ class EvalReport(BaseModel):
 
 # ── Dataset ──────────────────────────────────────────────────────────────────
 
+
 def load_dataset(path: Path) -> list[EvalCase]:
     with open(path) as f:
         data = yaml.safe_load(f)
@@ -85,6 +87,7 @@ def load_dataset(path: Path) -> list[EvalCase]:
 
 
 # ── Evaluation ───────────────────────────────────────────────────────────────
+
 
 def parse_matched_signals(headers: httpx.Headers) -> dict[str, list[str]] | None:
     """Extract matched signals from x-vsr-matched-* response headers."""
@@ -112,21 +115,32 @@ def evaluate_case(client: httpx.Client, router_url: str, case: EvalCase) -> Eval
     except httpx.HTTPStatusError as exc:
         elapsed = (time.perf_counter() - start) * 1000
         return EvalResult(
-            case_id=case.id, input=case.input,
+            case_id=case.id,
+            input=case.input,
             expected_decision=case.expected_decision,
-            predicted_decision="blocked" if exc.response.status_code in (403, 503) else None,
-            predicted_model=None, confidence=None, matched_signals=None,
-            latency_ms=elapsed, correct=(case.expected_decision == "blocked"),
+            predicted_decision="blocked"
+            if exc.response.status_code in (403, 503)
+            else None,
+            predicted_model=None,
+            confidence=None,
+            matched_signals=None,
+            latency_ms=elapsed,
+            correct=(case.expected_decision == "blocked"),
             error=f"HTTP {exc.response.status_code}",
         )
     except httpx.RequestError as exc:
         elapsed = (time.perf_counter() - start) * 1000
         return EvalResult(
-            case_id=case.id, input=case.input,
+            case_id=case.id,
+            input=case.input,
             expected_decision=case.expected_decision,
-            predicted_decision=None, predicted_model=None,
-            confidence=None, matched_signals=None,
-            latency_ms=elapsed, correct=False, error=str(exc),
+            predicted_decision=None,
+            predicted_model=None,
+            confidence=None,
+            matched_signals=None,
+            latency_ms=elapsed,
+            correct=False,
+            error=str(exc),
         )
 
     elapsed = (time.perf_counter() - start) * 1000
@@ -152,6 +166,7 @@ def evaluate_case(client: httpx.Client, router_url: str, case: EvalCase) -> Eval
 
 # ── Metrics ──────────────────────────────────────────────────────────────────
 
+
 def compute_metrics(
     results: list[EvalResult], decisions: list[str]
 ) -> tuple[dict[str, ClassMetrics], dict[str, dict[str, int]]]:
@@ -170,13 +185,21 @@ def compute_metrics(
     per_decision: dict[str, ClassMetrics] = {}
     for decision in decisions:
         tp = confusion[decision].get(decision, 0)
-        fp = sum(confusion[other].get(decision, 0) for other in decisions if other != decision)
+        fp = sum(
+            confusion[other].get(decision, 0)
+            for other in decisions
+            if other != decision
+        )
         fn = sum(v for k, v in confusion[decision].items() if k != decision)
         support = sum(confusion[decision].values())
 
         precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
         recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
-        f1 = (2 * precision * recall / (precision + recall)) if (precision + recall) > 0 else 0.0
+        f1 = (
+            (2 * precision * recall / (precision + recall))
+            if (precision + recall) > 0
+            else 0.0
+        )
 
         per_decision[decision] = ClassMetrics(
             precision=round(precision, 4),
@@ -201,6 +224,7 @@ def latency_percentiles(results: list[EvalResult]) -> tuple[float, float, float]
 
 # ── Reporting ────────────────────────────────────────────────────────────────
 
+
 def print_report(report: EvalReport) -> None:
     decisions = list(report.per_decision.keys())
 
@@ -211,23 +235,34 @@ def print_report(report: EvalReport) -> None:
     print()
 
     print(f"  Accuracy: {report.correct}/{report.total_cases} ({report.accuracy:.1%})")
-    print(f"  Latency:  p50={report.latency_p50_ms:.0f}ms  p95={report.latency_p95_ms:.0f}ms  p99={report.latency_p99_ms:.0f}ms")
+    print(
+        f"  Latency:  p50={report.latency_p50_ms:.0f}ms  p95={report.latency_p95_ms:.0f}ms  p99={report.latency_p99_ms:.0f}ms"
+    )
     print()
 
     rows = []
     for d in decisions:
         m = report.per_decision[d]
-        rows.append([d, f"{m.precision:.2f}", f"{m.recall:.2f}", f"{m.f1:.2f}", m.support])
-    print(tabulate(
-        rows,
-        headers=["Decision", "Precision", "Recall", "F1", "Support"],
-        tablefmt="simple_outline",
-    ))
+        rows.append(
+            [d, f"{m.precision:.2f}", f"{m.recall:.2f}", f"{m.f1:.2f}", m.support]
+        )
+    print(
+        tabulate(
+            rows,
+            headers=["Decision", "Precision", "Recall", "F1", "Support"],
+            tablefmt="simple_outline",
+        )
+    )
     print()
 
     cm_labels = sorted(
         set(decisions)
-        | {pred for row in report.confusion_matrix.values() for pred, cnt in row.items() if cnt > 0}
+        | {
+            pred
+            for row in report.confusion_matrix.values()
+            for pred, cnt in row.items()
+            if cnt > 0
+        }
     )
     header = ["expected \\ predicted"] + cm_labels
     cm_rows = []
@@ -242,7 +277,9 @@ def print_report(report: EvalReport) -> None:
         print(f"  Misclassified ({len(errors)}):")
         for r in errors:
             model_info = f"  model={r.predicted_model}" if r.predicted_model else ""
-            print(f"    [{r.case_id}] expected={r.expected_decision}  predicted={r.predicted_decision}{model_info}")
+            print(
+                f"    [{r.case_id}] expected={r.expected_decision}  predicted={r.predicted_decision}{model_info}"
+            )
             print(f"      query: {r.input[:80]}{'...' if len(r.input) > 80 else ''}")
             if r.error:
                 print(f"      error: {r.error}")
@@ -262,12 +299,32 @@ def save_json(report: EvalReport, path: Path) -> None:
 
 # ── Main ─────────────────────────────────────────────────────────────────────
 
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Evaluate semantic router routing accuracy")
-    parser.add_argument("--url", default="http://localhost:8899", help="SR built-in listener URL (default: http://localhost:8899)")
-    parser.add_argument("--dataset", default=None, help="Path to dataset YAML (default: eval/dataset.yaml next to this script)")
-    parser.add_argument("--output", default=None, help="Path for JSON results (default: eval/results.json next to this script)")
-    parser.add_argument("--pass-threshold", type=float, default=0.8, help="Minimum accuracy to exit 0 (default: 0.8)")
+    parser = argparse.ArgumentParser(
+        description="Evaluate semantic router routing accuracy"
+    )
+    parser.add_argument(
+        "--url",
+        default="http://localhost:8899",
+        help="SR built-in listener URL (default: http://localhost:8899)",
+    )
+    parser.add_argument(
+        "--dataset",
+        default=None,
+        help="Path to dataset YAML (default: eval/dataset.yaml next to this script)",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Path for JSON results (default: eval/results.json next to this script)",
+    )
+    parser.add_argument(
+        "--pass-threshold",
+        type=float,
+        default=0.8,
+        help="Minimum accuracy to exit 0 (default: 0.8)",
+    )
     args = parser.parse_args()
 
     script_dir = Path(__file__).resolve().parent
@@ -286,7 +343,10 @@ def main() -> None:
     try:
         client.get(f"{args.url}/health", timeout=5.0)
     except httpx.RequestError:
-        print(f"Error: cannot reach {args.url}/health — is the semantic router running?", file=sys.stderr)
+        print(
+            f"Error: cannot reach {args.url}/health — is the semantic router running?",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     results: list[EvalResult] = []
