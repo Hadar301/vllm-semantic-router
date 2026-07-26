@@ -82,7 +82,7 @@ llm-service-rag:
     hf_token: ""
     enabled: true
   models:
-    granite-3-1-8b-instruct:
+    granite-8b:
       id: ibm-granite/granite-3.1-8b-instruct
       enabled: true
       tolerations:
@@ -107,14 +107,15 @@ llm-service-rag:
         - --served-model-name
         - "rag-agent"
 
-# General conversation: Granite 3.1-2B
+# General conversation: Granite 3.1-2B — GPU default
+# For CPU deployment, apply: -f values-general-cpu.yaml
 llm-service-general:
   enabled: true
   secret:
     hf_token: ""
     enabled: true
   models:
-    granite-3-1-2b-instruct:
+    granite-2b:
       id: ibm-granite/granite-3.1-2b-instruct
       enabled: true
       tolerations:
@@ -149,7 +150,7 @@ llama-stack:
   pgvector:
     enabled: true
   models:
-    granite-3-1-8b-instruct:
+    granite-8b:
       id: rag-agent
       enabled: true
 

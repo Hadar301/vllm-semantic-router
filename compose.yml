@@ -74,22 +74,21 @@ services:
               capabilities: [gpu]
 
   llm-general:
-    image: vllm/vllm-openai:latest
+    image: vllm/vllm-openai-cpu:latest-x86_64
     ports:
       - "8003:8000"
     environment:
       HF_TOKEN: ${HF_TOKEN}
+      VLLM_CPU_KVCACHE_SPACE: "4"
+      VLLM_CPU_OMP_THREADS_BIND: auto
     command: >
       --model ibm-granite/granite-3.1-2b-instruct
       --served-model-name general-agent
+      --device cpu
+      --dtype bfloat16
+      --block-size 128
+      --max-num-batched-tokens 2048
       --max-model-len 4096
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: 1
-              capabilities: [gpu]
 
   # --- Llamastack (RAG agent) ---
   llamastack:

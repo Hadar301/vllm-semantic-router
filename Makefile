@@ -1,7 +1,11 @@
 .DEFAULT_GOAL := help
 
+HELM_CHART    := deploy/helm/vllm-semantic-router
+HELM_RELEASE  := vllm-semantic-router
+HELM_NS       := hacohen-vllm-semantic-router-qs
+
 help:
-	@echo "Targets: setup, dev, lint, test, test-integration, test-e2e, eval, deploy, undeploy"
+	@echo "Targets: setup, dev, lint, test, test-integration, test-e2e, eval, deploy, deploy-gpu, deploy-cpu, undeploy"
 
 setup:
 	pnpm install
@@ -38,9 +42,16 @@ eval:
 helm-lint:
 	helm lint deploy/helm/vllm-semantic-router/
 
-deploy:
-	helm dependency update deploy/helm/vllm-semantic-router
-	helm upgrade --install vllm-semantic-router deploy/helm/vllm-semantic-router
+deploy: deploy-gpu
+
+deploy-gpu:
+	helm dependency update $(HELM_CHART)
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) -n $(HELM_NS)
+
+deploy-cpu:
+	helm dependency update $(HELM_CHART)
+	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) -n $(HELM_NS) \
+	  -f $(HELM_CHART)/values-general-cpu.yaml
 
 undeploy:
-	helm uninstall vllm-semantic-router
+	helm uninstall $(HELM_RELEASE) -n $(HELM_NS)

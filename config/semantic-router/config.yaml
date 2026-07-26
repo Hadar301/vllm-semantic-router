@@ -83,11 +83,6 @@ routing:
         conditions:
           - type: domain
             name: "computer science"
-      algorithm:
-        type: session_aware
-        session_aware:
-          base_method: hybrid
-          tool_loop_hard_lock: true
       modelRefs:
         - model: research-agent
           use_reasoning: true
@@ -175,6 +170,15 @@ global:
           threshold: 0.9
   router:
     auto_model_name: auto
+    learning:
+      enabled: true
+      protection:
+        enabled: true
+        scope: conversation
+        identity:
+          headers:
+            session: x-session-id
+            conversation: x-conversation-id
   services:
     observability:
       tracing:
@@ -184,6 +188,10 @@ global:
       metrics:
         enabled: true
         port: 9190
+    management_api:
+      remote_exposure: true
+      auth:
+        mode: disabled
   stores:
     semantic_cache:
       enabled: true
