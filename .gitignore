@@ -48,3 +48,9 @@ eval/results.json
 # Helm
 deploy/helm/*/charts/
 deploy/helm/*/*.tgz
+
+# graphify output
+graphify-out/
+
+# local documents
+local-docs/
