@@ -3,24 +3,22 @@ services:
   semantic-router:
     image: ghcr.io/vllm-project/semantic-router/extproc:latest
     ports:
-      - "8080:8080"   # Classify API
-      - "8899:8899"   # SR listener (routing + backend)
-      - "9190:9190"   # Metrics
+      - "8080:8080" # Classify API
+      - "8899:8899" # SR listener (routing + backend)
+      - "9190:9190" # Metrics
     volumes:
       - ./config/semantic-router/config.yaml:/app/config/config.yaml:ro
     depends_on:
       - llm-research
       - llm-general
-
   envoy:
     image: envoyproxy/envoy:v1.35.3
     ports:
-      - "8801:8801"   # OpenAI-compatible proxy
+      - "8801:8801" # OpenAI-compatible proxy
     volumes:
       - ./deploy/local/envoy.yaml:/etc/envoy/envoy.yaml:ro
     depends_on:
       - semantic-router
-
   # --- SR Dashboard ---
   sr-dashboard:
     image: ghcr.io/vllm-project/semantic-router/dashboard:latest
@@ -35,7 +33,6 @@ services:
       - ./config/semantic-router/config.yaml:/app/config/config.yaml:ro
     depends_on:
       - semantic-router
-
   # --- Model Serving (vLLM) ---
   llm-research:
     image: vllm/vllm-openai:latest
@@ -44,9 +41,8 @@ services:
     environment:
       HF_TOKEN: ${HF_TOKEN}
     command: >
-      --model Qwen/Qwen3-8B
-      --served-model-name research-agent
-      --max-model-len 4096
+      --model Qwen/Qwen3-8B --served-model-name research-agent --max-model-len 4096
+
     deploy:
       resources:
         reservations:
@@ -54,7 +50,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
   llm-rag:
     image: vllm/vllm-openai:latest
     ports:
@@ -62,9 +57,8 @@ services:
     environment:
       HF_TOKEN: ${HF_TOKEN}
     command: >
-      --model ibm-granite/granite-3.1-8b-instruct
-      --served-model-name rag-agent
-      --max-model-len 4096
+      --model ibm-granite/granite-3.1-8b-instruct --served-model-name rag-agent --max-model-len 4096
+
     deploy:
       resources:
         reservations:
@@ -72,7 +66,6 @@ services:
             - driver: nvidia
               count: 1
               capabilities: [gpu]
-
   llm-general:
     image: vllm/vllm-openai-cpu:latest-x86_64
     ports:
@@ -82,13 +75,7 @@ services:
       VLLM_CPU_KVCACHE_SPACE: "4"
       VLLM_CPU_OMP_THREADS_BIND: auto
     command: >
-      --model ibm-granite/granite-3.1-2b-instruct
-      --served-model-name general-agent
-      --device cpu
-      --dtype bfloat16
-      --block-size 128
-      --max-num-batched-tokens 2048
-      --max-model-len 4096
+      --model ibm-granite/granite-3.1-2b-instruct --served-model-name general-agent --device cpu --dtype bfloat16 --block-size 128 --max-num-batched-tokens 2048 --max-model-len 4096
 
   # --- Llamastack (RAG agent) ---
   llamastack:
@@ -98,7 +85,6 @@ services:
     depends_on:
       - pgvector
       - llm-rag
-
   # --- Storage ---
   pgvector:
     image: pgvector/pgvector:pg16
@@ -115,7 +101,6 @@ services:
       retries: 5
     volumes:
       - pgvector-data:/var/lib/postgresql/data
-
   minio:
     image: quay.io/minio/minio:latest
     ports:
@@ -127,7 +112,6 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - minio-data:/data
-
   # --- Application ---
   api:
     build:
@@ -143,7 +127,6 @@ services:
       - semantic-router
       - envoy
       - llamastack
-
   chat-ui:
     build:
       context: .
@@ -152,7 +135,6 @@ services:
       - "3000:3000"
     depends_on:
       - api
-
 volumes:
   pgvector-data:
   minio-data:

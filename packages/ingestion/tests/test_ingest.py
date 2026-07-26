@@ -2,7 +2,6 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 from botocore.exceptions import ClientError
-
 from src.ingest import main, register_vector_store, upload_to_minio
 
 

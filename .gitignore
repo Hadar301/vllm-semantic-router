@@ -54,3 +54,5 @@ graphify-out/
 
 # local documents
 local-docs/
+benchmark-results/
+llm-service/

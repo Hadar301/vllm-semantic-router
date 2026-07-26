@@ -19,28 +19,24 @@ semanticRouter:
   modelsPersistence:
     enabled: true
     size: 20Gi
-
 srDashboard:
   enabled: true
   image:
     repository: ghcr.io/vllm-project/semantic-router/dashboard
     tag: latest
     pullPolicy: IfNotPresent
-
 # --- Chat UI + API (custom application) ---
 chatUI:
   image:
     repository: quay.io/hacohen/vllm-semantic-router-chat-ui
     tag: latest
     pullPolicy: Always
-
 api:
   image:
     repository: quay.io/hacohen/vllm-semantic-router-api
     tag: latest
     pullPolicy: Always
   corsOrigins: ""
-
 # --- Model Serving (3x llm-service via ai-architecture-charts) ---
 
 # Research agent: Qwen3-8B with reasoning
@@ -74,7 +70,6 @@ llm-service-research:
         - "16"
         - --served-model-name
         - "research-agent"
-
 # RAG backing model: Granite 3.1-8B
 llm-service-rag:
   enabled: true
@@ -106,7 +101,6 @@ llm-service-rag:
         - "16"
         - --served-model-name
         - "rag-agent"
-
 # General conversation: Granite 3.1-2B — GPU default
 # For CPU deployment, apply: -f values-general-cpu.yaml
 llm-service-general:
@@ -139,9 +133,7 @@ llm-service-general:
         - "32"
         - --served-model-name
         - "general-agent"
-
 # --- RAG Infrastructure ---
-
 llama-stack:
   enabled: true
   image:
@@ -153,21 +145,17 @@ llama-stack:
     granite-8b:
       id: rag-agent
       enabled: true
-
 pgvector:
   enabled: true
   secret:
     dbname: semantic_router
-
 minio:
   enabled: true
   secret:
     user: ""
     password: ""
-
 ingestion-pipeline:
   enabled: false
-
 # --- GuideLLM Benchmarking ---
 # Deploy a one-shot Job that benchmarks all three model endpoints.
 # Usage:
