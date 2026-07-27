@@ -4,15 +4,12 @@ Measures routing accuracy by sending labeled queries to the SR's built-in HTTP l
 
 ## Quick Start
 
+The SR Envoy proxy (port 8801) runs the full signal pipeline and returns `x-vsr-*` headers.
+Port-forward it locally before running eval:
+
 ```bash
-# Get the SR listener route from your cluster
-SR_URL=$(oc get route -n <namespace> -l app.kubernetes.io/name=envoy \
-  -o jsonpath='{.items[0].spec.host}')
-
-make eval ARGS="--url https://${SR_URL}"
-
-# Or run directly
-uv run eval/eval.py --url https://<sr-envoy-route>
+oc port-forward svc/vllm-semantic-router-router 8801:8801 -n <namespace> &
+make eval ARGS="--url http://localhost:8801"
 ```
 
 ## How It Works
@@ -26,15 +23,15 @@ uv run eval/eval.py --url https://<sr-envoy-route>
 
 Exit code is `0` if accuracy >= 80%, `1` otherwise.
 
-### Why the SR listener instead of the eval API?
+### Why Envoy (8801) instead of the eval API (8080)?
 
-The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII signals — those classifiers are only wired into the request processing path. The SR listener (port 8899, configured under `listeners` in the config) runs the full signal pipeline and returns `x-vsr-*` headers with the decision, confidence, and matched signals.
+The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII signals — those classifiers are only wired into the full request processing path. The Envoy proxy (port 8801) routes every request through ExtProc, which runs the complete signal pipeline and sets `x-vsr-*` headers with the decision, confidence, and matched signals.
 
 ## CLI Options
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--url` | `http://localhost:8899` | SR built-in listener URL (set to your OCP route) |
+| `--url` | `http://localhost:8801` | SR Envoy proxy URL (port-forward svc/vllm-semantic-router-router 8801:8801) |
 | `--dataset` | `eval/dataset.yaml` | Path to the dataset file |
 | `--output` | `eval/results.json` | Path for JSON results output |
 | `--pass-threshold` | `0.8` | Minimum accuracy to exit 0 |
@@ -42,7 +39,7 @@ The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII 
 Pass arguments through the Makefile with `ARGS`:
 
 ```bash
-make eval ARGS="--url https://<sr-envoy-route> --pass-threshold 0.9"
+make eval ARGS="--url http://localhost:8801 --pass-threshold 0.9"
 ```
 
 ## Dataset Format

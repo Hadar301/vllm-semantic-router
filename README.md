@@ -81,10 +81,10 @@ graph TB
 - Red Hat OpenShift AI 2.9+
 - `oc` CLI authenticated to the cluster
 - `helm` 3.x
-- **GPU:** 3 NVIDIA GPUs (T4, L4, or A10G) for model serving. All models are <=8B parameters — each requires a dedicated GPU.
+- **GPU:** 2–3 NVIDIA GPUs (T4, L4, or A10G) for model serving.
   - 1 GPU for Qwen3-8B (research)
   - 1 GPU for Granite 3.1-8B (RAG)
-  - 1 GPU for Granite 3.1-2B (general)
+  - 1 GPU for Granite 3.1-2B (general) — **or** use `make deploy-cpu` to run the general model on CPU, reducing GPU requirement to 2
 - Hugging Face token with access to Qwen3-8B
 - If GPU nodes have custom taints (e.g. `g5-gpu`), tolerations must be added per model in `values.yaml`
 
@@ -116,7 +116,7 @@ If GPU nodes have custom taints (common on shared clusters), add tolerations und
 # Example for a cluster with g5-gpu taint
 llm-service-general:
   models:
-    granite-3-1-2b-instruct:
+    granite-2b:
       tolerations:
         - key: nvidia.com/gpu
           effect: NoSchedule
@@ -213,7 +213,7 @@ The semantic router classifies every incoming query using configurable **signals
 | rag | 15 | Granite 3.1-8B | Keyword signals match (document-terms or rag-keywords) |
 | general | 1 | Granite 3.1-2B | Domain classified as "other" (default) |
 
-The config also includes v0.3 features: a `projections` layer that partitions domains into an exclusive `request_type` group, and a `session_aware` algorithm on the research decision that prevents model switches during active tool loops. Jailbreak and PII signals run as built-in defaults.
+Jailbreak and PII signals run as built-in defaults.
 
 Routing configuration lives in `config/semantic-router/config.yaml`. To customize routing for your own app, edit the `decisions`, `signals`, and `projections` sections -- no code changes needed.
 
@@ -241,7 +241,7 @@ make deploy-cpu        # Deploy with CPU overlay for the general model
 make undeploy          # helm uninstall
 ```
 
-Linting and Helm chart validation run automatically via pre-commit hooks (`pre-commit run --all-files` to run manually).
+Linting, type-checking, Helm validation, and unit tests all run via pre-commit hooks (`pre-commit run --all-files` to run manually). CI runs the same hooks.
 
 ## Project Structure
 
