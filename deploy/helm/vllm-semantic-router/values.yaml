@@ -26,14 +26,16 @@ srDashboard:
     tag: latest
     pullPolicy: IfNotPresent
 # --- Chat UI + API (custom application) ---
+# Set these at deploy time: make deploy REGISTRY=quay.io ORG=<your-org>
+# or: helm upgrade --install ... --set chatUI.image.repository=<registry>/<org>/vllm-semantic-router-chat-ui
 chatUI:
   image:
-    repository: quay.io/hacohen/vllm-semantic-router-chat-ui
+    repository: <REGISTRY>/<ORG>/vllm-semantic-router-chat-ui
     tag: latest
     pullPolicy: Always
 api:
   image:
-    repository: quay.io/hacohen/vllm-semantic-router-api
+    repository: <REGISTRY>/<ORG>/vllm-semantic-router-api
     tag: latest
     pullPolicy: Always
   corsOrigins: ""

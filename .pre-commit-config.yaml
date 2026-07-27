@@ -31,3 +31,23 @@ repos:
     rev: v8.24.2
     hooks:
       - id: gitleaks
+  - repo: local
+    hooks:
+      - id: helm-lint
+        name: Helm Lint
+        entry: helm lint deploy/helm/vllm-semantic-router
+        language: system
+        pass_filenames: false
+        files: ^deploy/helm/
+      - id: eslint-chat-ui
+        name: ESLint
+        entry: pnpm --filter chat-ui lint
+        language: system
+        pass_filenames: false
+        files: ^packages/chat-ui/.*\.(ts|tsx|js)$
+      - id: tsc-chat-ui
+        name: TypeScript check
+        entry: pnpm --filter chat-ui type-check
+        language: system
+        pass_filenames: false
+        files: ^packages/chat-ui/.*\.(ts|tsx)$

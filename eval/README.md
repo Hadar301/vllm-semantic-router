@@ -5,11 +5,14 @@ Measures routing accuracy by sending labeled queries to the SR's built-in HTTP l
 ## Quick Start
 
 ```bash
-# Requires the semantic router running locally on port 8899
-make eval
+# Get the SR listener route from your cluster
+SR_URL=$(oc get route -n <namespace> -l app.kubernetes.io/name=envoy \
+  -o jsonpath='{.items[0].spec.host}')
 
-# Or run directly with a custom endpoint
-uv run eval/eval.py --url http://my-router:8899
+make eval ARGS="--url https://${SR_URL}"
+
+# Or run directly
+uv run eval/eval.py --url https://<sr-envoy-route>
 ```
 
 ## How It Works
@@ -31,7 +34,7 @@ The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII 
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--url` | `http://localhost:8899` | SR built-in listener URL |
+| `--url` | `http://localhost:8899` | SR built-in listener URL (set to your OCP route) |
 | `--dataset` | `eval/dataset.yaml` | Path to the dataset file |
 | `--output` | `eval/results.json` | Path for JSON results output |
 | `--pass-threshold` | `0.8` | Minimum accuracy to exit 0 |
@@ -39,7 +42,7 @@ The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII 
 Pass arguments through the Makefile with `ARGS`:
 
 ```bash
-make eval ARGS="--url http://my-router:8899 --pass-threshold 0.9"
+make eval ARGS="--url https://<sr-envoy-route> --pass-threshold 0.9"
 ```
 
 ## Dataset Format

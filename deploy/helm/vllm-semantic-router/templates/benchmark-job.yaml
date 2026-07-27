@@ -45,8 +45,8 @@ spec:
             - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: huggingface-secret
-                  key: HF_TOKEN
+                  name: {{ include "vllm-semantic-router.fullname" . }}-hf-token
+                  key: token
           volumeMounts:
             - name: results
               mountPath: /results
@@ -87,8 +87,8 @@ spec:
             - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: huggingface-secret
-                  key: HF_TOKEN
+                  name: {{ include "vllm-semantic-router.fullname" . }}-hf-token
+                  key: token
           volumeMounts:
             - name: results
               mountPath: /results
@@ -129,8 +129,8 @@ spec:
             - name: HF_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: huggingface-secret
-                  key: HF_TOKEN
+                  name: {{ include "vllm-semantic-router.fullname" . }}-hf-token
+                  key: token
           volumeMounts:
             - name: results
               mountPath: /results

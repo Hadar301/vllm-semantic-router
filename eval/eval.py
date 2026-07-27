@@ -216,6 +216,8 @@ def latency_percentiles(results: list[EvalResult]) -> tuple[float, float, float]
     if not latencies:
         return 0.0, 0.0, 0.0
     p50 = statistics.median(latencies)
+    if len(latencies) < 2:
+        return round(p50, 1), round(p50, 1), round(p50, 1)
     quantiles = statistics.quantiles(latencies, n=100, method="inclusive")
     p95 = quantiles[94] if len(quantiles) > 94 else latencies[-1]
     p99 = quantiles[98] if len(quantiles) > 98 else latencies[-1]
