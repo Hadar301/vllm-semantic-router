@@ -33,6 +33,24 @@ repos:
       - id: gitleaks
   - repo: local
     hooks:
+      - id: pytest-api
+        name: pytest (api)
+        entry: uv run --project packages/api --extra test pytest packages/api/tests/unit/ -v
+        language: system
+        pass_filenames: false
+        files: ^packages/(api|db)/
+      - id: pytest-ingestion
+        name: pytest (ingestion)
+        entry: uv run --project packages/ingestion --extra test pytest packages/ingestion/tests/ -v
+        language: system
+        pass_filenames: false
+        files: ^packages/ingestion/
+      - id: vitest-chat-ui
+        name: vitest (chat-ui)
+        entry: pnpm --filter chat-ui test
+        language: system
+        pass_filenames: false
+        files: ^packages/chat-ui/
       - id: helm-lint
         name: Helm Lint
         entry: helm lint deploy/helm/vllm-semantic-router
