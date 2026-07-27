@@ -165,6 +165,10 @@ oc get route -n vllm-semantic-router -l app.kubernetes.io/name=chat-ui \
 # Get the SR dashboard URL
 oc get route -n vllm-semantic-router -l app.kubernetes.io/name=sr-dashboard \
   -o jsonpath='{.items[0].spec.host}'
+
+# Get the SR Envoy URL (for eval)
+oc get route -n vllm-semantic-router -l app.kubernetes.io/name=envoy \
+  -o jsonpath='{.items[0].spec.host}'
 ```
 
 ### Troubleshooting

@@ -308,8 +308,10 @@ def main() -> None:
     )
     parser.add_argument(
         "--url",
-        default="http://localhost:8899",
-        help="SR built-in listener URL (default: http://localhost:8899)",
+        default="http://localhost:8801",
+        # On OpenShift: use the vllm-semantic-router-envoy route (exposed by the Helm chart).
+        # Locally: oc port-forward svc/vllm-semantic-router-router 8801:8801
+        help="SR Envoy proxy URL — use the OCP route or port-forward to 8801 (default: http://localhost:8801)",
     )
     parser.add_argument(
         "--dataset",

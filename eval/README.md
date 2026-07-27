@@ -4,12 +4,14 @@ Measures routing accuracy by sending labeled queries to the SR's built-in HTTP l
 
 ## Quick Start
 
-The SR Envoy proxy (port 8801) runs the full signal pipeline and returns `x-vsr-*` headers.
-Port-forward it locally before running eval:
+The SR Envoy proxy runs the full signal pipeline and returns `x-vsr-*` headers. The Helm chart
+exposes it via an OCP Route — no port-forwarding required:
 
 ```bash
-oc port-forward svc/vllm-semantic-router-router 8801:8801 -n <namespace> &
-make eval ARGS="--url http://localhost:8801"
+ENVOY_ROUTE=$(oc get route vllm-semantic-router-envoy -n <namespace> \
+  -o jsonpath='{.spec.host}')
+
+make eval ARGS="--url https://${ENVOY_ROUTE}"
 ```
 
 ## How It Works
@@ -31,7 +33,7 @@ The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII 
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--url` | `http://localhost:8801` | SR Envoy proxy URL (port-forward svc/vllm-semantic-router-router 8801:8801) |
+| `--url` | `http://localhost:8801` | SR Envoy proxy URL — use the OCP route (`vllm-semantic-router-envoy`) or port-forward to 8801 |
 | `--dataset` | `eval/dataset.yaml` | Path to the dataset file |
 | `--output` | `eval/results.json` | Path for JSON results output |
 | `--pass-threshold` | `0.8` | Minimum accuracy to exit 0 |
@@ -39,7 +41,7 @@ The `/api/v1/eval` REST endpoint (port 8080) does not evaluate jailbreak or PII 
 Pass arguments through the Makefile with `ARGS`:
 
 ```bash
-make eval ARGS="--url http://localhost:8801 --pass-threshold 0.9"
+make eval ARGS="--url https://<envoy-route> --pass-threshold 0.9"
 ```
 
 ## Dataset Format
