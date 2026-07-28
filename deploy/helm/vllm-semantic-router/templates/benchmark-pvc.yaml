@@ -8,7 +8,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
 spec:
   accessModes: [ReadWriteOnce]
-  storageClassName: gp3-csi
+  storageClassName: {{ .Values.benchmark.results.storageClassName }}
   resources:
     requests:
       storage: {{ .Values.benchmark.results.pvcSize }}

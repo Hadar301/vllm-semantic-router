@@ -11,8 +11,13 @@ API_IMAGE     ?= $(REGISTRY)/$(ORG)/vllm-semantic-router-api
 
 help:
 	@echo "Targets: build-push, test, eval, benchmark, benchmark-results, deploy, deploy-gpu, deploy-cpu, undeploy"
+	@echo "Required vars: REGISTRY, ORG, HELM_NS, HF_TOKEN (export before deploying)"
 
-build-push:
+_require-org:
+	@test "$(ORG)" != "<your-org>" || \
+	  (echo "Error: ORG is not set. Usage: make $@ REGISTRY=quay.io ORG=<your-org>"; exit 1)
+
+build-push: _require-org
 	podman build --platform=linux/amd64 \
 	  -t $(CHAT_UI_IMAGE):latest \
 	  -f packages/chat-ui/Containerfile .
@@ -30,15 +35,23 @@ test:
 eval:
 	uv run eval/eval.py $(ARGS)
 
-benchmark:
+benchmark: _require-org
+	oc delete job $(HELM_RELEASE)-benchmark -n $(HELM_NS) --ignore-not-found
 	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) -n $(HELM_NS) \
 	  --set benchmark.enabled=true \
 	  --set chatUI.image.repository=$(CHAT_UI_IMAGE) \
 	  --set api.image.repository=$(API_IMAGE) \
+	  --set semanticRouter.hfToken=$(HF_TOKEN) \
+	  --set llm-service-research.secret.hf_token=$(HF_TOKEN) \
+	  --set llm-service-rag.secret.hf_token=$(HF_TOKEN) \
+	  --set llm-service-general.secret.hf_token=$(HF_TOKEN) \
 	  $(HELM_FLAGS)
 	@echo "Waiting for benchmark job to complete (up to 30m)..."
 	oc wait -n $(HELM_NS) job/$(HELM_RELEASE)-benchmark \
 	  --for=condition=complete --timeout=30m
+	@oc get job -n $(HELM_NS) $(HELM_RELEASE)-benchmark \
+	  -o jsonpath='{.status.failed}' | grep -qE '^0?$$' || \
+	  (echo "Benchmark job reported failures"; exit 1)
 
 benchmark-results:
 	$(eval BENCH_POD := $(shell oc get pod -n $(HELM_NS) \
@@ -51,19 +64,27 @@ benchmark-results:
 
 deploy: deploy-gpu
 
-deploy-gpu:
+deploy-gpu: _require-org
 	helm dependency update $(HELM_CHART)
 	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) -n $(HELM_NS) \
 	  --set chatUI.image.repository=$(CHAT_UI_IMAGE) \
 	  --set api.image.repository=$(API_IMAGE) \
+	  --set semanticRouter.hfToken=$(HF_TOKEN) \
+	  --set llm-service-research.secret.hf_token=$(HF_TOKEN) \
+	  --set llm-service-rag.secret.hf_token=$(HF_TOKEN) \
+	  --set llm-service-general.secret.hf_token=$(HF_TOKEN) \
 	  $(HELM_FLAGS)
 
-deploy-cpu:
+deploy-cpu: _require-org
 	helm dependency update $(HELM_CHART)
 	helm upgrade --install $(HELM_RELEASE) $(HELM_CHART) -n $(HELM_NS) \
 	  -f $(HELM_CHART)/values-general-cpu.yaml \
 	  --set chatUI.image.repository=$(CHAT_UI_IMAGE) \
 	  --set api.image.repository=$(API_IMAGE) \
+	  --set semanticRouter.hfToken=$(HF_TOKEN) \
+	  --set llm-service-research.secret.hf_token=$(HF_TOKEN) \
+	  --set llm-service-rag.secret.hf_token=$(HF_TOKEN) \
+	  --set llm-service-general.secret.hf_token=$(HF_TOKEN) \
 	  $(HELM_FLAGS)
 
 undeploy:

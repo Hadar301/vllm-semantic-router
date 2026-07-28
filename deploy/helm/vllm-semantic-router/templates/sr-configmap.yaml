@@ -179,6 +179,7 @@ data:
         observability:
           metrics:
             enabled: true
+            port: 9190
       stores:
         semantic_cache:
           enabled: true

@@ -3,6 +3,10 @@
 # --- Semantic Router (custom components, not from ai-architecture-charts) ---
 semanticRouter:
   hfToken: ""
+  # Exposes the Envoy proxy (port 8801) as an OCP Route for direct eval access.
+  # WARNING: This is an unauthenticated public endpoint — disable in production.
+  envoyRoute:
+    enabled: true
   image:
     repository: ghcr.io/vllm-project/semantic-router/extproc
     tag: latest
@@ -26,16 +30,15 @@ srDashboard:
     tag: latest
     pullPolicy: IfNotPresent
 # --- Chat UI + API (custom application) ---
-# Set these at deploy time: make deploy REGISTRY=quay.io ORG=<your-org>
-# or: helm upgrade --install ... --set chatUI.image.repository=<registry>/<org>/vllm-semantic-router-chat-ui
+# Required: set image repos before deploying — run: make build-push REGISTRY=... ORG=...
 chatUI:
   image:
-    repository: <REGISTRY>/<ORG>/vllm-semantic-router-chat-ui
+    repository: ""
     tag: latest
     pullPolicy: Always
 api:
   image:
-    repository: <REGISTRY>/<ORG>/vllm-semantic-router-api
+    repository: ""
     tag: latest
     pullPolicy: Always
   corsOrigins: ""
@@ -170,6 +173,7 @@ ingestion-pipeline:
 benchmark:
   enabled: false
   image: registry.access.redhat.com/ubi9/python-311:latest
+  guidellmVersion: "0.7.*"
   # HuggingFace model IDs for tokenizer resolution (not model download).
   tokenizers:
     general: ibm-granite/granite-3.1-2b-instruct
@@ -196,3 +200,4 @@ benchmark:
       outputTokens: 128
   results:
     pvcSize: 5Gi
+    storageClassName: gp3-csi

@@ -53,7 +53,7 @@ repos:
         files: ^packages/chat-ui/
       - id: helm-lint
         name: Helm Lint
-        entry: helm lint deploy/helm/vllm-semantic-router
+        entry: bash -c "helm dependency update deploy/helm/vllm-semantic-router && helm lint --set chatUI.image.repository=lint/placeholder --set api.image.repository=lint/placeholder deploy/helm/vllm-semantic-router" # gitleaks:allow
         language: system
         pass_filenames: false
         files: ^deploy/helm/

@@ -341,28 +341,26 @@ def main() -> None:
     print(f"\n  Evaluating {len(cases)} cases against {args.url}")
     print(f"  Decisions: {', '.join(decisions)}\n")
 
-    client = httpx.Client(timeout=30.0)
+    with httpx.Client(timeout=120.0) as client:
+        # Health check — probe /v1/models which Envoy forwards through ExtProc to vLLM
+        try:
+            resp = client.get(f"{args.url}/v1/models", timeout=10.0)
+            resp.raise_for_status()
+        except (httpx.RequestError, httpx.HTTPStatusError) as exc:
+            print(
+                f"Error: cannot reach {args.url}/v1/models — is the semantic router running? ({exc})",
+                file=sys.stderr,
+            )
+            sys.exit(1)
 
-    # Health check
-    try:
-        client.get(f"{args.url}/health", timeout=5.0)
-    except httpx.RequestError:
-        print(
-            f"Error: cannot reach {args.url}/health — is the semantic router running?",
-            file=sys.stderr,
-        )
-        sys.exit(1)
-
-    results: list[EvalResult] = []
-    for i, case in enumerate(cases, 1):
-        print(f"  [{i}/{len(cases)}] {case.id}", end="", flush=True)
-        result = evaluate_case(client, args.url, case)
-        mark = "ok" if result.correct else "FAIL"
-        model_tag = f" [{result.predicted_model}]" if result.predicted_model else ""
-        print(f"  ... {mark}{model_tag}  ({result.latency_ms:.0f}ms)")
-        results.append(result)
-
-    client.close()
+        results: list[EvalResult] = []
+        for i, case in enumerate(cases, 1):
+            print(f"  [{i}/{len(cases)}] {case.id}", end="", flush=True)
+            result = evaluate_case(client, args.url, case)
+            mark = "ok" if result.correct else "FAIL"
+            model_tag = f" [{result.predicted_model}]" if result.predicted_model else ""
+            print(f"  ... {mark}{model_tag}  ({result.latency_ms:.0f}ms)")
+            results.append(result)
 
     correct = sum(1 for r in results if r.correct)
     accuracy = correct / len(results) if results else 0.0
