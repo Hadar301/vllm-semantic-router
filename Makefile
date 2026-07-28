@@ -49,9 +49,10 @@ benchmark: _require-org
 	@echo "Waiting for benchmark job to complete (up to 30m)..."
 	oc wait -n $(HELM_NS) job/$(HELM_RELEASE)-benchmark \
 	  --for=condition=complete --timeout=30m
-	@oc get job -n $(HELM_NS) $(HELM_RELEASE)-benchmark \
-	  -o jsonpath='{.status.failed}' | grep -qE '^0?$$' || \
-	  (echo "Benchmark job reported failures"; exit 1)
+	$(eval BENCH_FAILED := $(shell oc get job -n $(HELM_NS) $(HELM_RELEASE)-benchmark \
+	  -o jsonpath='{.status.failed}'))
+	@test -z "$(BENCH_FAILED)" || test "$(BENCH_FAILED)" = "0" || \
+	  (echo "Benchmark job reported $(BENCH_FAILED) failure(s)"; exit 1)
 
 benchmark-results:
 	$(eval BENCH_POD := $(shell oc get pod -n $(HELM_NS) \
